@@ -16,31 +16,40 @@
       <body>
         <canvas id="screen" width="1280" height="720"></canvas>
         <script>
-          const ws = new WebSocket("ws://192.168.1.127:8080/RemoteDesktop");
+          const ws = new WebSocket("ws://localhost:8080/RemoteDesktop"); // Cambia localhost por la IP del servidor si es necesario
           const canvas = document.getElementById("screen");
           const ctx = canvas.getContext("2d");
-
+      
           ws.onopen = function () {
             console.log("Conectado al servidor WebSocket");
             requestCapture();
+            requestStatus(); // Solicitar el rendimiento del sistema al conectarse
           };
-
+      
           ws.onmessage = function (event) {
-            const blob = new Blob([event.data], { type: "image/jpeg" });
-            const url = URL.createObjectURL(blob);
-            const img = new Image();
-            img.onload = function () {
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              URL.revokeObjectURL(url); // Liberar memoria
-              requestCapture(); // Solicitar la siguiente captura
-            };
-            img.src = url;
+            if (typeof event.data === "string") {
+              console.log(event.data); // Mostrar el rendimiento del sistema en la consola
+            } else {
+              const blob = new Blob([event.data], { type: "image/jpeg" });
+              const url = URL.createObjectURL(blob);
+              const img = new Image();
+              img.onload = function () {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                URL.revokeObjectURL(url); // Liberar memoria
+                requestCapture(); // Solicitar la siguiente captura
+              };
+              img.src = url;
+            }
           };
-
+      
           function requestCapture() {
             ws.send("capture");
           }
-
+      
+          function requestStatus() {
+            ws.send("status");
+          }
+      
           // Capturar eventos del mouse y teclado para enviar al servidor
           canvas.addEventListener("mousemove", function (event) {
             const data = {
@@ -50,16 +59,19 @@
             };
             ws.send(JSON.stringify(data));
           });
-
+      
           canvas.addEventListener("click", function (event) {
             const data = { type: "click", x: event.offsetX, y: event.offsetY };
             ws.send(JSON.stringify(data));
           });
-
+      
           document.addEventListener("keydown", function (event) {
             const data = { type: "keydown", key: event.key };
             ws.send(JSON.stringify(data));
           });
+      
+          // Solicitar el rendimiento del sistema cada 5 segundos
+          setInterval(requestStatus, 5000);
         </script>
       </body>
     </html>

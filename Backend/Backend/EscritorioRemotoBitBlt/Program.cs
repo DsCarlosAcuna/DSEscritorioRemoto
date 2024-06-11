@@ -9,7 +9,7 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.Threading;
 
-namespace Backend
+namespace EscritorioRemotoBitBlt
 {
     public class RemoteDesktop : WebSocketBehavior
     {
@@ -39,21 +39,37 @@ namespace Backend
             }
         }
 
-        // Método para capturar la pantalla
+        // Método para capturar la pantalla usando BitBlt
         private Bitmap CaptureScreen()
         {
             // Obtener las dimensiones de la pantalla principal
             Rectangle bounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
             Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
 
-            // Crear un objeto Graphics para copiar la pantalla al bitmap
+            // Crear un objeto Graphics a partir del bitmap
             using (Graphics g = Graphics.FromImage(bitmap))
             {
-                g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
+                IntPtr hdcDest = g.GetHdc();
+                IntPtr hdcSrc = GetDC(IntPtr.Zero);
+                BitBlt(hdcDest, 0, 0, bounds.Width, bounds.Height, hdcSrc, 0, 0, SRCCOPY);
+                ReleaseDC(IntPtr.Zero, hdcSrc);
+                g.ReleaseHdc(hdcDest);
             }
 
             return bitmap;
         }
+
+        // Declaración de funciones y constantes de la API de Windows
+        [DllImport("gdi32.dll")]
+        private static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight, IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        private const int SRCCOPY = 0x00CC0020;
 
         private string GetPerformanceStatus()
         {
@@ -122,30 +138,24 @@ namespace Backend
         public static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
 
     }
-
-
-
     public class Program
     {
-        
-    static void Main(string[] args)
+        static void Main(string[] args)
         {
-        WebSocketServer wssv = new WebSocketServer("ws://localhost:8080");
+            WebSocketServer wssv = new WebSocketServer("ws://localhost:8080");
 
-        // Añadir el servicio WebSocket que manejará las conexiones en la ruta /RemoteDesktop
-        wssv.AddWebSocketService<RemoteDesktop>("/RemoteDesktop");
+            // Añadir el servicio WebSocket que manejará las conexiones en la ruta /RemoteDesktop
+            wssv.AddWebSocketService<RemoteDesktop>("/RemoteDesktop");
 
-        // Iniciar el servidor WebSocket
-        wssv.Start();
-        Console.WriteLine("Servidor WebSocket iniciado en ws://localhost:8080");
-
-            Thread monitorThread = new Thread(MonitorPerformance);
-            monitorThread.Start();
+            // Iniciar el servidor WebSocket
+            wssv.Start();
+            Console.WriteLine("Servidor WebSocket iniciado con BitBlt en ws://localhost:8080");
 
             // Esperar a que se presione una tecla para detener el servidor
             Console.ReadKey();
-        wssv.Stop();
-    }
+            wssv.Stop();
+        }
+
         private static void MonitorPerformance()
         {
             var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");

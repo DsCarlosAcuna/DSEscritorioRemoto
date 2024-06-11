@@ -9,22 +9,40 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.Threading;
 
-namespace Backend
+namespace EscritorioRemotoBitBltXor
 {
     public class RemoteDesktop : WebSocketBehavior
     {
+        private Bitmap previousFrame;
+        private bool isFirstFrame = true;
+
         // Este método se ejecuta cuando el servidor recibe un mensaje del cliente
         protected override void OnMessage(MessageEventArgs e)
         {
-            // Si el mensaje recibido es "capture", se captura y envía una imagen de la pantalla
             if (e.Data == "capture")
             {
                 Bitmap capture = CaptureScreen();
-                using (MemoryStream ms = new MemoryStream())
+                if (isFirstFrame)
                 {
-                    capture.Save(ms, ImageFormat.Jpeg);
-                    Send(ms.ToArray());
+                    // Enviar el primer fotograma completo
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        capture.Save(ms, ImageFormat.Jpeg);
+                        Send(ms.ToArray());
+                    }
+                    isFirstFrame = false;
                 }
+                else
+                {
+                    Bitmap diff = GetDifferenceBitmap(previousFrame, capture);
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        diff.Save(ms, ImageFormat.Jpeg);
+                        Send(ms.ToArray());
+                    }
+                }
+                previousFrame?.Dispose();
+                previousFrame = capture;
             }
             else if (e.Data == "status")
             {
@@ -39,30 +57,60 @@ namespace Backend
             }
         }
 
-        // Método para capturar la pantalla
         private Bitmap CaptureScreen()
         {
-            // Obtener las dimensiones de la pantalla principal
             Rectangle bounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
             Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
-
-            // Crear un objeto Graphics para copiar la pantalla al bitmap
             using (Graphics g = Graphics.FromImage(bitmap))
             {
-                g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
+                IntPtr hdcDest = g.GetHdc();
+                IntPtr hdcSrc = GetDC(IntPtr.Zero);
+                BitBlt(hdcDest, 0, 0, bounds.Width, bounds.Height, hdcSrc, 0, 0, SRCCOPY);
+                ReleaseDC(IntPtr.Zero, hdcSrc);
+                g.ReleaseHdc(hdcDest);
             }
-
             return bitmap;
         }
+
+        private Bitmap GetDifferenceBitmap(Bitmap bmp1, Bitmap bmp2)
+        {
+            int width = bmp1.Width;
+            int height = bmp1.Height;
+            Bitmap diffBitmap = new Bitmap(width, height);
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color c1 = bmp1.GetPixel(x, y);
+                    Color c2 = bmp2.GetPixel(x, y);
+                    int r = c1.R ^ c2.R;
+                    int g = c1.G ^ c2.G;
+                    int b = c1.B ^ c2.B;
+                    diffBitmap.SetPixel(x, y, Color.FromArgb(r, g, b));
+                }
+            }
+            return diffBitmap;
+        }
+
+        [DllImport("gdi32.dll")]
+        private static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight, IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        private const int SRCCOPY = 0x00CC0020;
 
         private string GetPerformanceStatus()
         {
             var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             var ramCounter = new PerformanceCounter("Memory", "Available MBytes");
 
-            // Se deben inicializar los contadores antes de obtener el primer valor
             cpuCounter.NextValue();
-            Thread.Sleep(1000); // Esperar un segundo para obtener un valor correcto
+            Thread.Sleep(1000);
             float cpuUsage = cpuCounter.NextValue();
             float availableMemory = ramCounter.NextValue();
 
@@ -77,7 +125,6 @@ namespace Backend
             public string Key { get; set; }
         }
 
-        // Método para manejar eventos de entrada
         private void HandleInputEvent(EventData eventData)
         {
             switch (eventData.Type)
@@ -94,58 +141,46 @@ namespace Backend
             }
         }
 
-        // Método para mover el mouse
         private void MouseMove(int x, int y)
         {
             Cursor.Position = new Point(x, y);
         }
 
-        // Método para simular un clic del mouse
         private void MouseClick(int x, int y)
         {
             Cursor.Position = new Point(x, y);
             mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, x, y, 0, 0);
         }
 
-        // Método para simular una pulsación de tecla
         private void KeyDown(string key)
         {
             SendKeys.SendWait(key);
         }
 
-        // Declaración de constantes para simular eventos de mouse
         private const int MOUSEEVENTF_LEFTDOWN = 0x02;
         private const int MOUSEEVENTF_LEFTUP = 0x04;
 
-        // Método externo para simular eventos de mouse
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         public static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
-
     }
-
-
-
     public class Program
     {
-        
-    static void Main(string[] args)
+        static void Main(string[] args)
         {
-        WebSocketServer wssv = new WebSocketServer("ws://localhost:8080");
+            WebSocketServer wssv = new WebSocketServer("ws://localhost:8080");
 
-        // Añadir el servicio WebSocket que manejará las conexiones en la ruta /RemoteDesktop
-        wssv.AddWebSocketService<RemoteDesktop>("/RemoteDesktop");
+            wssv.AddWebSocketService<RemoteDesktop>("/RemoteDesktop");
 
-        // Iniciar el servidor WebSocket
-        wssv.Start();
-        Console.WriteLine("Servidor WebSocket iniciado en ws://localhost:8080");
+            wssv.Start();
+            Console.WriteLine("Servidor WebSocket iniciado en ws://localhost:8080");
 
             Thread monitorThread = new Thread(MonitorPerformance);
             monitorThread.Start();
 
-            // Esperar a que se presione una tecla para detener el servidor
             Console.ReadKey();
-        wssv.Stop();
-    }
+            wssv.Stop();
+        }
+
         private static void MonitorPerformance()
         {
             var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
@@ -153,15 +188,14 @@ namespace Backend
 
             while (true)
             {
-                // Se deben inicializar los contadores antes de obtener el primer valor
                 cpuCounter.NextValue();
-                Thread.Sleep(1000); // Esperar un segundo para obtener un valor correcto
+                Thread.Sleep(1000);
                 float cpuUsage = cpuCounter.NextValue();
                 float availableMemory = ramCounter.NextValue();
 
                 Console.WriteLine($"CPU Usage: {cpuUsage}% | Available Memory: {availableMemory}MB");
 
-                Thread.Sleep(5000); // Esperar 5 segundos antes de la siguiente medición
+                Thread.Sleep(5000);
             }
         }
     }
