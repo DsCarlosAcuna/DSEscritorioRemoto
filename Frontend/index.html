@@ -25,12 +25,16 @@
             requestCapture();
             requestStatus(); // Solicitar el rendimiento del sistema al conectarse
           };
+
+          ws.onclose = function() {
+            console.log("WebSocket connection closed");
+        };
       
           ws.onmessage = function (event) {
             if (typeof event.data === "string") {
               console.log(event.data); // Mostrar el rendimiento del sistema en la consola
             } else {
-              const blob = new Blob([event.data], { type: "image/jpeg" });
+              const blob = new Blob([event.data], { type: "image/png" });
               const url = URL.createObjectURL(blob);
               const img = new Image();
               img.onload = function () {
