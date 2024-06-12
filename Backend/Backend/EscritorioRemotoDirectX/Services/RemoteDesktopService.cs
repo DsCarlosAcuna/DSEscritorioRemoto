@@ -8,6 +8,8 @@ using EscritorioRemotoDirectX.Utils;
 using EscritorioRemotoDirectX.Models;
 using System.Drawing.Imaging;
 using System.Drawing;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 
 namespace EscritorioRemotoDirectX.Services
 {
@@ -17,6 +19,7 @@ namespace EscritorioRemotoDirectX.Services
         private int _captureInterval = 100;
         private Device _device;
         private SharpDX.DXGI.OutputDuplication _outputDuplication;
+        private Mat _previousCapture = null;
 
         public RemoteDesktopService()
         {
@@ -55,43 +58,47 @@ namespace EscritorioRemotoDirectX.Services
                     var capture = ScreenCaptureService.CaptureScreen(_device, _outputDuplication);
                     if (capture != null)
                     {
-                        byte[] compressedData = CompressImage(capture, 10L); // Ajusta la calidad según sea necesario (0L a 100L)
-                        if (compressedData != null)
+                        Mat currentCapture = BitmapConverter.ToMat(capture);
+
+                        if (_previousCapture == null || HasDifference(_previousCapture, currentCapture))
                         {
-                            Send(compressedData);
+                            byte[] imageData = ImageToByteArray(capture);
+                            if (imageData != null)
+                            {
+                                Send(imageData);
+                            }
                         }
+
+                        _previousCapture?.Dispose();
+                        _previousCapture = currentCapture;
                     }
                     Thread.Sleep(_captureInterval);
                 }
             });
         }
 
-        private byte[] CompressImage(Bitmap image, long quality)
+        private bool HasDifference(Mat previousImage, Mat currentImage)
+        {
+            if (previousImage.Size() != currentImage.Size())
+            {
+                return true;
+            }
+
+            Mat diff = new Mat();
+            Cv2.BitwiseXor(previousImage, currentImage, diff);
+            Cv2.CvtColor(diff, diff, ColorConversionCodes.BGR2GRAY);
+            var nonZeroCount = Cv2.CountNonZero(diff);
+
+            return nonZeroCount > 0;
+        }
+
+        private byte[] ImageToByteArray(Bitmap image)
         {
             using (MemoryStream ms = new MemoryStream())
             {
-                ImageCodecInfo jpgEncoder = GetEncoder(ImageFormat.Jpeg);
-                Encoder qualityEncoder = Encoder.Quality;
-                EncoderParameters encoderParams = new EncoderParameters(1);
-                EncoderParameter encoderParam = new EncoderParameter(qualityEncoder, quality);
-                encoderParams.Param[0] = encoderParam;
-
-                image.Save(ms, jpgEncoder, encoderParams);
+                image.Save(ms, ImageFormat.Png);
                 return ms.ToArray();
             }
-        }
-
-        private ImageCodecInfo GetEncoder(ImageFormat format)
-        {
-            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
-            foreach (ImageCodecInfo codec in codecs)
-            {
-                if (codec.FormatID == format.Guid)
-                {
-                    return codec;
-                }
-            }
-            return null;
         }
 
         private void StopCapture()
@@ -103,6 +110,7 @@ namespace EscritorioRemotoDirectX.Services
         {
             _outputDuplication.Dispose();
             _device.Dispose();
+            _previousCapture?.Dispose();
             base.OnClose(e);
         }
     }
