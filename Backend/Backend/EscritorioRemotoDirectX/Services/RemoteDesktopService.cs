@@ -57,12 +57,10 @@ namespace EscritorioRemotoDirectX.Services
             if (_isRunning) return;
             _isRunning = true;
 
-            // Variables para conservar las dimensiones originales
-            int originalWidth = 0;
-            int originalHeight = 0;
-
             ThreadPool.QueueUserWorkItem(state =>
             {
+                Mat previousCapture = null;
+
                 while (_isRunning)
                 {
                     var capture = ScreenCaptureService.CaptureScreen(_device, _outputDuplication);
@@ -71,43 +69,44 @@ namespace EscritorioRemotoDirectX.Services
                         Mat currentCapture = BitmapConverter.ToMat(capture);
                         Rect boundingBox = new Rect();
 
-                        if (_isFirstCapture || _previousCapture == null || HasDifference(_previousCapture, currentCapture, out boundingBox))
+                        if (_isFirstCapture || previousCapture == null || HasDifference(previousCapture, currentCapture, out boundingBox))
                         {
                             Bitmap regionBitmap;
-                            Mat resizedCurrentCapture;
 
                             if (_isFirstCapture)
                             {
-                                // En la primera captura, conservamos las dimensiones originales
-                                originalWidth = currentCapture.Width;
-                                originalHeight = currentCapture.Height;
+                                // Convertimos toda la captura a Bitmap
                                 regionBitmap = capture;
                                 _isFirstCapture = false;
+
+                                // Convertimos la captura completa a byte[] y la enviamos al cliente
+                                byte[] initialCaptureData = ImageToByteArray(regionBitmap);
+                                if (initialCaptureData != null)
+                                {
+                                    Send(initialCaptureData);
+                                }
                             }
                             else
                             {
-                                // Redimensionamos la captura actual al tamaño original
-                                resizedCurrentCapture = new Mat();
-                                Cv2.Resize(currentCapture, resizedCurrentCapture, new OpenCvSharp.Size(originalWidth, originalHeight));
-
-                                // Determinamos la región cambiada en la captura redimensionada
-                                Mat changedRegion = new Mat(resizedCurrentCapture, boundingBox);
-
                                 // Convertimos la región cambiada a Bitmap
+                                Mat changedRegion = new Mat(currentCapture, boundingBox);
                                 regionBitmap = BitmapConverter.ToBitmap(changedRegion);
+
+                                // Convertimos la región cambiada a byte[] y la enviamos al cliente
+                                byte[] regionData = ImageToByteArray(regionBitmap);
+                                if (regionData != null)
+                                {
+                                    Send(regionData);
+                                }
                             }
 
-                            byte[] regionData = ImageToByteArray(regionBitmap);
-                            if (regionData != null)
-                            {
-                                Send(regionData);
-                            }
                             regionBitmap.Dispose();
                         }
 
-                        _previousCapture?.Dispose();
-                        _previousCapture = currentCapture;
+                        previousCapture?.Dispose();
+                        previousCapture = currentCapture;
                     }
+
                     Thread.Sleep(_captureInterval);
                 }
             });
