@@ -10,6 +10,7 @@ using System.Drawing.Imaging;
 using System.Drawing;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
+using System;
 
 namespace EscritorioRemotoDirectX.Services
 {
@@ -28,20 +29,24 @@ namespace EscritorioRemotoDirectX.Services
 
         protected override void OnMessage(MessageEventArgs e)
         {
-            try
+            if (e.Data == "capture")
             {
-                var eventData = JsonConvert.DeserializeObject<EventData>(e.Data);
-                InputHandlingService.HandleInputEvent(eventData);
+                StartCapture();
             }
-            catch (JsonReaderException)
+            else if (e.Data == "stop")
             {
-                if (e.Data == "capture")
+                StopCapture();
+            }
+            else
+            {
+                try
                 {
-                    StartCapture();
+                    var eventData = JsonConvert.DeserializeObject<EventData>(e.Data);
+                    InputHandlingService.HandleInputEvent(eventData);
                 }
-                else if (e.Data == "stop")
+                catch (JsonReaderException)
                 {
-                    StopCapture();
+                    Console.WriteLine("");
                 }
             }
         }
