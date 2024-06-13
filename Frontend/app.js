@@ -21,7 +21,15 @@ ws.onmessage = function (event) {
     const url = URL.createObjectURL(blob);
     const img = new Image();
     img.onload = function () {
-      if (currentImage) {
+      if (!currentImage) {
+        // Si no hay imagen actual, establecerla como la primera imagen recibida
+        currentImage = new Image();
+        currentImage.src = url;
+        currentImage.onload = function () {
+          ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url); // Liberar memoria
+        };
+      } else {
         // Crear un canvas temporal para realizar la operación XOR
         const tempCanvas = document.createElement("canvas");
         const tempCtx = tempCanvas.getContext("2d");
@@ -31,44 +39,42 @@ ws.onmessage = function (event) {
         // Dibujar la imagen actual en el canvas temporal
         tempCtx.drawImage(currentImage, 0, 0);
 
-        // Obtener los datos de imagen del canvas temporal y la nueva imagen
-        const currentData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-        const newData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        // Dibujar la nueva imagen en el canvas temporal
+        tempCtx.drawImage(img, 0, 0);
 
-        // Aplicar la operación XOR
+        // Obtener los datos de imagen del canvas temporal
+        const currentImageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+        const newImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        // Aplicar la operación XOR solo a las regiones que han cambiado
         let hasDifference = false;
-        for (let i = 0; i < currentData.data.length; i += 4) {
-          const r = currentData.data[i] ^ newData.data[i]; // Red channel
-          const g = currentData.data[i + 1] ^ newData.data[i + 1]; // Green channel
-          const b = currentData.data[i + 2] ^ newData.data[i + 2]; // Blue channel
+        for (let i = 0; i < currentImageData.data.length; i += 4) {
+          const r = currentImageData.data[i] ^ newImageData.data[i]; // Red channel
+          const g = currentImageData.data[i + 1] ^ newImageData.data[i + 1]; // Green channel
+          const b = currentImageData.data[i + 2] ^ newImageData.data[i + 2]; // Blue channel
 
           if (r !== 0 || g !== 0 || b !== 0) {
             hasDifference = true;
           }
 
-          currentData.data[i] = r;
-          currentData.data[i + 1] = g;
-          currentData.data[i + 2] = b;
-          currentData.data[i + 3] = 255; // Alpha channel
+          newImageData.data[i] = r;
+          newImageData.data[i + 1] = g;
+          newImageData.data[i + 2] = b;
+          newImageData.data[i + 3] = 255; // Alpha channel
         }
 
         // Si hay diferencia, actualizar el canvas con los datos de imagen modificados
         if (hasDifference) {
-          ctx.putImageData(currentData, 0, 0);
-          currentImage.src = canvas.toDataURL();
+          ctx.putImageData(newImageData, 0, 0);
+
+          // Actualizar currentImage con los nuevos datos de imagen
+          currentImage.src = url;
+
+          // Liberar el objeto URL creado para la nueva imagen
+          URL.revokeObjectURL(url);
         }
-      } else {
-        // Si no hay una imagen actual, simplemente dibujar la nueva imagen
-        currentImage = new Image();
-        currentImage.src = url;
-        currentImage.onload = function () {
-          ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
-          URL.revokeObjectURL(url); // Liberar memoria
-        };
       }
 
-      URL.revokeObjectURL(url); // Liberar memoria
       requestCapture(); // Solicitar la siguiente captura
     };
     img.src = url;

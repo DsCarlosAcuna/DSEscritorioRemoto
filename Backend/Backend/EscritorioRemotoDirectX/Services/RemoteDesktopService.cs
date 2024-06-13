@@ -21,6 +21,7 @@ namespace EscritorioRemotoDirectX.Services
         private Device _device;
         private SharpDX.DXGI.OutputDuplication _outputDuplication;
         private Mat _previousCapture = null;
+        private bool _isFirstCapture = true; // Flag to indicate if it's the first capture
 
         public RemoteDesktopService()
         {
@@ -66,19 +67,28 @@ namespace EscritorioRemotoDirectX.Services
                         Mat currentCapture = BitmapConverter.ToMat(capture);
                         Rect boundingBox = new Rect();
 
-                        if (_previousCapture == null || HasDifference(_previousCapture, currentCapture, out boundingBox))
+                        if (_isFirstCapture || _previousCapture == null || HasDifference(_previousCapture, currentCapture, out boundingBox))
                         {
-                            if (boundingBox.Width > 0 && boundingBox.Height > 0) // Ensure boundingBox is valid
+                            Bitmap regionBitmap;
+                            if (_isFirstCapture)
                             {
-                                var changedRegion = new Mat(currentCapture, boundingBox);
-                                Bitmap regionBitmap = BitmapConverter.ToBitmap(changedRegion);
-                                byte[] regionData = ImageToByteArray(regionBitmap);
-                                if (regionData != null)
-                                {
-                                    Send(regionData);
-                                }
-                                regionBitmap.Dispose();
+                                // Send the whole image on the first capture
+                                regionBitmap = capture;
+                                _isFirstCapture = false;
                             }
+                            else
+                            {
+                                // Send only the changed region
+                                var changedRegion = new Mat(currentCapture, boundingBox);
+                                regionBitmap = BitmapConverter.ToBitmap(changedRegion);
+                            }
+
+                            byte[] regionData = ImageToByteArray(regionBitmap);
+                            if (regionData != null)
+                            {
+                                Send(regionData);
+                            }
+                            regionBitmap.Dispose();
                         }
 
                         _previousCapture?.Dispose();
