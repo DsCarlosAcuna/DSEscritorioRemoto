@@ -14,7 +14,12 @@ namespace EscritorioRemotoDirectX.Services
         {
             Bitmap bitmap = null;
             try
-            {// Obtener la descripción de la pantalla
+            {
+                if (device == null || outputDuplication == null)
+                {
+                    throw new ArgumentNullException("Device or OutputDuplication is null");
+                }
+
                 var factory = new Factory1();
                 var adapter = factory.GetAdapter1(0);
                 var output = adapter.GetOutput(0);
