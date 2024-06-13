@@ -64,13 +64,20 @@ namespace EscritorioRemotoDirectX.Services
                     if (capture != null)
                     {
                         Mat currentCapture = BitmapConverter.ToMat(capture);
+                        Rect boundingBox = new Rect();
 
-                        if (_previousCapture == null || HasDifference(_previousCapture, currentCapture))
+                        if (_previousCapture == null || HasDifference(_previousCapture, currentCapture, out boundingBox))
                         {
-                            byte[] imageData = ImageToByteArray(capture);
-                            if (imageData != null)
+                            if (boundingBox.Width > 0 && boundingBox.Height > 0) // Ensure boundingBox is valid
                             {
-                                Send(imageData);
+                                var changedRegion = new Mat(currentCapture, boundingBox);
+                                Bitmap regionBitmap = BitmapConverter.ToBitmap(changedRegion);
+                                byte[] regionData = ImageToByteArray(regionBitmap);
+                                if (regionData != null)
+                                {
+                                    Send(regionData);
+                                }
+                                regionBitmap.Dispose();
                             }
                         }
 
@@ -82,19 +89,30 @@ namespace EscritorioRemotoDirectX.Services
             });
         }
 
-        private bool HasDifference(Mat previousImage, Mat currentImage)
+        private bool HasDifference(Mat previousImage, Mat currentImage, out Rect boundingBox)
         {
+            boundingBox = new Rect();
+
             if (previousImage.Size() != currentImage.Size())
             {
+                boundingBox = new Rect(0, 0, currentImage.Width, currentImage.Height);
                 return true;
             }
 
             Mat diff = new Mat();
             Cv2.BitwiseXor(previousImage, currentImage, diff);
             Cv2.CvtColor(diff, diff, ColorConversionCodes.BGR2GRAY);
-            var nonZeroCount = Cv2.CountNonZero(diff);
 
-            return nonZeroCount > 0;
+            Mat nonZero = new Mat();
+            Cv2.FindNonZero(diff, nonZero);
+
+            if (nonZero.Rows > 0)
+            {
+                boundingBox = Cv2.BoundingRect(nonZero);
+                return true;
+            }
+
+            return false;
         }
 
         private byte[] ImageToByteArray(Bitmap image)
