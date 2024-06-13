@@ -57,6 +57,10 @@ namespace EscritorioRemotoDirectX.Services
             if (_isRunning) return;
             _isRunning = true;
 
+            // Variables para conservar las dimensiones originales
+            int originalWidth = 0;
+            int originalHeight = 0;
+
             ThreadPool.QueueUserWorkItem(state =>
             {
                 while (_isRunning)
@@ -70,16 +74,26 @@ namespace EscritorioRemotoDirectX.Services
                         if (_isFirstCapture || _previousCapture == null || HasDifference(_previousCapture, currentCapture, out boundingBox))
                         {
                             Bitmap regionBitmap;
+                            Mat resizedCurrentCapture;
+
                             if (_isFirstCapture)
                             {
-                                // Send the whole image on the first capture
+                                // En la primera captura, conservamos las dimensiones originales
+                                originalWidth = currentCapture.Width;
+                                originalHeight = currentCapture.Height;
                                 regionBitmap = capture;
                                 _isFirstCapture = false;
                             }
                             else
                             {
-                                // Send only the changed region
-                                var changedRegion = new Mat(currentCapture, boundingBox);
+                                // Redimensionamos la captura actual al tamaño original
+                                resizedCurrentCapture = new Mat();
+                                Cv2.Resize(currentCapture, resizedCurrentCapture, new OpenCvSharp.Size(originalWidth, originalHeight));
+
+                                // Determinamos la región cambiada en la captura redimensionada
+                                Mat changedRegion = new Mat(resizedCurrentCapture, boundingBox);
+
+                                // Convertimos la región cambiada a Bitmap
                                 regionBitmap = BitmapConverter.ToBitmap(changedRegion);
                             }
 
