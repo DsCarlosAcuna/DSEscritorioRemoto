@@ -178,7 +178,7 @@ namespace EscritorioRemotoDirectX
                             _previousCapture.Dispose();
                             _previousCapture = bitmap;
                             bitmap = diffBitmap;
-                        }                        
+                        }                       
                     }
                     catch (SharpDXException ex)
                     {

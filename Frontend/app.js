@@ -21,14 +21,15 @@ ws.onmessage = function (event) {
     const url = URL.createObjectURL(blob);
     const img = new Image();
     img.onload = function () {
+      const newImageData = getImageDataFromImage(img);
+
       if (lastImageData) {
-        // Dibujar solo los cambios
-        drawChanges(lastImageData, img);
+        applyXor(lastImageData, newImageData);
       } else {
-        // Dibujar la imagen completa si es la primera vez
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       }
-      lastImageData = img;
+
+      lastImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url); // Liberar el objeto URL
       requestCapture(); // Solicitar la siguiente captura
     };
@@ -64,25 +65,22 @@ document.addEventListener("keydown", function (event) {
   ws.send(JSON.stringify(data));
 });
 
-function drawChanges(prevImage, newImage) {
-  const prevCanvas = document.createElement('canvas');
-  const prevCtx = prevCanvas.getContext('2d');
-  prevCanvas.width = canvas.width;
-  prevCanvas.height = canvas.height;
-  
-  prevCtx.drawImage(prevImage, 0, 0);
+function getImageDataFromImage(image) {
+  const tempCanvas = document.createElement('canvas');
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  tempCtx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+}
 
-  const diffCanvas = document.createElement('canvas');
-  const diffCtx = diffCanvas.getContext('2d');
-  diffCanvas.width = canvas.width;
-  diffCanvas.height = canvas.height;
+function applyXor(prevImageData, newImageData) {
+  const prevData = prevImageData.data;
+  const newData = newImageData.data;
 
-  diffCtx.clearRect(0, 0, canvas.width, canvas.height);
-  diffCtx.globalCompositeOperation = 'source-in';
-  diffCtx.drawImage(newImage, 0, 0);
-  diffCtx.globalCompositeOperation = 'source-over';
-  diffCtx.drawImage(prevCanvas, 0, 0);
+  for (let i = 0; i < prevData.length; i++) {
+    newData[i] = prevData[i] ^ newData[i];
+  }
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(diffCanvas, 0, 0);
+  ctx.putImageData(newImageData, 0, 0);
 }
