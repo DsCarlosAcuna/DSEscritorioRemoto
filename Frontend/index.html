@@ -1,82 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remote Desktop</title>
-    <script src="https://docs.opencv.org/4.x/opencv.js"></script>
-    <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remote Desktop Viewer</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Escritorio Remoto</h1>  
- <canvas id="screen" width="1280" height="720"></canvas>
- <script>
-  const ws = new WebSocket("ws://localhost:8080/RemoteDesktop"); // Cambia localhost por la IP del servidor si es necesario
-  const canvas = document.getElementById("screen");
-  const ctx = canvas.getContext("2d");
-  let currentImage = null; // Mantener los datos de la imagen actual
-  let isFirstImage = true; // Flag para la primera imagen
-
-  ws.onopen = function () {
-      console.log("Conectado al servidor WebSocket");
-      requestCapture();
-  };
-
-  ws.onclose = function () {
-      console.log("WebSocket connection closed");
-  };
-
-  ws.onmessage = function (event) {
-            if (typeof event.data === "string") {
-                console.log(event.data); // Mostrar mensajes del servidor en la consola si es necesario
-            } else {
-                const blob = new Blob([event.data], { type: "image/png" });
-                const url = URL.createObjectURL(blob);
-                const img = new Image();
-                img.onload = function () {
-                    if (!currentImage) {
-                        // Si no hay imagen actual, dibujar la primera imagen
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        currentImage = new Image();
-                        currentImage.src = url;
-                        currentImage.onload = function () {
-                            URL.revokeObjectURL(url); // Liberar memoria
-                        };
-                    } else {
-                        // Dibujar la nueva imagen sobre la imagen actual
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        URL.revokeObjectURL(url); // Liberar memoria
-                    }
-
-                    requestCapture(); // Solicitar la siguiente captura
-                };
-                img.src = url;
-            }
-        };
-
-  function requestCapture() {
-      ws.send("capture");
-  }
-
-  // Capturar eventos del mouse y teclado para enviar al servidor
-  canvas.addEventListener("mousemove", function (event) {
-      const data = {
-          type: "mousemove",
-          x: event.offsetX,
-          y: event.offsetY,
-      };
-      ws.send(JSON.stringify(data));
-  });
-
-  canvas.addEventListener("click", function (event) {
-      const data = { type: "click", x: event.offsetX, y: event.offsetY };
-      ws.send(JSON.stringify(data));
-  });
-
-  document.addEventListener("keydown", function (event) {
-      const data = { type: "keydown", key: event.key };
-      ws.send(JSON.stringify(data));
-  });
-</script>
+  <div class="container">
+      <h1>Remote Desktop Viewer</h1>
+      <canvas id="screen" width="1280" height="720"></canvas>
+  </div>
+  <script src="app.js"></script>
 </body>
 </html>

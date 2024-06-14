@@ -83,7 +83,7 @@ namespace EscritorioRemotoDirectX.Services
                                 byte[] initialCaptureData = ImageToByteArray(regionBitmap);
                                 if (initialCaptureData != null)
                                 {
-                                    Send(initialCaptureData);
+                                    SendRegion(initialCaptureData, new Rect(0, 0, currentCapture.Width, currentCapture.Height));
                                 }
                             }
                             else
@@ -96,7 +96,7 @@ namespace EscritorioRemotoDirectX.Services
                                 byte[] regionData = ImageToByteArray(regionBitmap);
                                 if (regionData != null)
                                 {
-                                    Send(regionData);
+                                    SendRegion(regionData, boundingBox);
                                 }
                             }
 
@@ -145,6 +145,17 @@ namespace EscritorioRemotoDirectX.Services
                 image.Save(ms, ImageFormat.Png);
                 return ms.ToArray();
             }
+        }
+
+        private void SendRegion(byte[] imageData, Rect region)
+        {
+            var regionData = new
+            {
+                Data = imageData
+            };
+
+            var json = JsonConvert.SerializeObject(regionData);
+            Send(json);
         }
 
         private void StopCapture()
