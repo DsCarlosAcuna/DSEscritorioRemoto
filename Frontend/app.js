@@ -14,27 +14,23 @@ ws.onclose = function () {
 };
 
 ws.onmessage = function (event) {
-  if (typeof event.data === "string") {
-    console.log(event.data);
-  } else {
-    const blob = new Blob([event.data], { type: "image/png" });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = function () {
-      const newImageData = getImageDataFromImage(img);
+  const blob = new Blob([event.data], { type: "image/png" });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = function () {
+    const newImageData = getImageDataFromImage(img);
 
-      if (lastImageData) {
-        applyXor(lastImageData, newImageData);
-      } else {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      }
+    if (lastImageData) {
+      applyXor(lastImageData, newImageData);
+    } else {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
 
-      lastImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url); // Liberar el objeto URL
-      requestCapture(); // Solicitar la siguiente captura
-    };
-    img.src = url;
-  }
+    lastImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url); // Liberar el objeto URL
+    requestCapture(); // Solicitar la siguiente captura
+  };
+  img.src = url;
 };
 
 function requestCapture() {
@@ -66,8 +62,8 @@ document.addEventListener("keydown", function (event) {
 });
 
 function getImageDataFromImage(image) {
-  const tempCanvas = document.createElement('canvas');
-  const tempCtx = tempCanvas.getContext('2d');
+  const tempCanvas = document.createElement("canvas");
+  const tempCtx = tempCanvas.getContext("2d");
   tempCanvas.width = canvas.width;
   tempCanvas.height = canvas.height;
   tempCtx.drawImage(image, 0, 0, canvas.width, canvas.height);
@@ -77,10 +73,18 @@ function getImageDataFromImage(image) {
 function applyXor(prevImageData, newImageData) {
   const prevData = prevImageData.data;
   const newData = newImageData.data;
+  let isBlack = true;
 
   for (let i = 0; i < prevData.length; i++) {
     newData[i] = prevData[i] ^ newData[i];
+    if (newData[i] !== 0) {
+      isBlack = false;
+    }
   }
 
-  ctx.putImageData(newImageData, 0, 0);
+  if (!isBlack) {
+    ctx.putImageData(newImageData, 0, 0);
+  } else {
+    console.log("Black frame detected, skipping update");
+  }
 }

@@ -45,7 +45,7 @@ namespace EscritorioRemotoDirectX.Services
                 {
                     try
                     {
-                        outputDuplication.AcquireNextFrame(100, out var frameInfo, out var desktopResource);
+                        outputDuplication.AcquireNextFrame(1000, out var frameInfo, out var desktopResource);
                         using (var screenTexture2D = desktopResource.QueryInterface<Texture2D>())
                         {
                             device.ImmediateContext.CopyResource(screenTexture2D, screenTexture);
