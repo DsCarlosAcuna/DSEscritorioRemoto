@@ -15,18 +15,16 @@ namespace EscritorioRemotoDirectX.Services
 {
     public class RemoteDesktop : WebSocketBehavior
     {
-        private bool _isRunning = false;
-        private SharpDX.Direct3D11.Device _device;
-        private OutputDuplication _outputDuplication;
-        private int _captureInterval = 500;
-        private Bitmap _previousCapture;
-        private Bitmap _previousRegion;
+        private static bool _isRunning = false;
+        private static SharpDX.Direct3D11.Device _device;
+        private static OutputDuplication _outputDuplication;
+        private static int _captureInterval = 100;
+        private static Bitmap _previousCapture;
 
         public RemoteDesktop()
         {
             InitializeDirectX();
         }
-
 
         protected override void OnMessage(MessageEventArgs e)
         {
@@ -43,31 +41,48 @@ namespace EscritorioRemotoDirectX.Services
                 var eventData = JsonConvert.DeserializeObject<EventData>(e.Data);
                 InputHandlingService.HandleInputEvent(eventData);
             }
+        }
 
+        protected override void OnOpen()
+        {
+            Console.WriteLine("WebSocket connection opened");
+        }
+
+        protected override void OnClose(CloseEventArgs e)
+        {
+            Console.WriteLine("WebSocket connection closed");
+            StopCapture();
+        }
+
+        protected override void OnError(WebSocketSharp.ErrorEventArgs e)
+        {
+            Console.WriteLine("WebSocket error: " + e.Message);
+            StopCapture();
         }
 
         private void InitializeDirectX()
         {
-            var factory = new Factory1();
-            var adapter = factory.GetAdapter1(0);
-            var output = adapter.GetOutput(0);
-            var output1 = output.QueryInterface<Output1>();
+            if (_device == null)
+            {
+                var factory = new Factory1();
+                var adapter = factory.GetAdapter1(0);
+                var output = adapter.GetOutput(0);
+                var output1 = output.QueryInterface<Output1>();
 
-            _device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
-            _outputDuplication = output1.DuplicateOutput(_device);
+                _device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
+                _outputDuplication = output1.DuplicateOutput(_device);
 
-            output1.Dispose();
-            output.Dispose();
-            adapter.Dispose();
-            factory.Dispose();
+                output1.Dispose();
+                output.Dispose();
+                adapter.Dispose();
+                factory.Dispose();
+            }
         }
 
         private void StartCapture()
         {
             if (_isRunning) return;
             _isRunning = true;
-
-            Bitmap previousCapture = null;
 
             ThreadPool.QueueUserWorkItem(state =>
             {
@@ -76,32 +91,17 @@ namespace EscritorioRemotoDirectX.Services
                     Bitmap capture = ScreenCaptureService.CaptureScreen(_device, _outputDuplication);
                     if (capture != null)
                     {
-                        if (previousCapture != null)
+                        if (_previousCapture != null)
                         {
-                            Bitmap xorBitmap = new Bitmap(capture.Width, capture.Height);
-
-                            for (int y = 0; y < capture.Height; y++)
-                            {
-                                for (int x = 0; x < capture.Width; x++)
-                                {
-                                    Color pixelCurrent = capture.GetPixel(x, y);
-                                    Color pixelPrevious = previousCapture.GetPixel(x, y);
-
-                                    int r = pixelCurrent.R ^ pixelPrevious.R;
-                                    int g = pixelCurrent.G ^ pixelPrevious.G;
-                                    int b = pixelCurrent.B ^ pixelPrevious.B;
-
-                                    Color xorColor = Color.FromArgb(r, g, b);
-                                    xorBitmap.SetPixel(x, y, xorColor);
-                                }
-                            }
-
+                            Bitmap xorBitmap = ApplyXor(_previousCapture, capture);
                             using (MemoryStream ms = new MemoryStream())
                             {
                                 xorBitmap.Save(ms, ImageFormat.Png);
-                                Send(ms.ToArray());
+                                if (this.State == WebSocketState.Open)
+                                {
+                                    Send(ms.ToArray());
+                                }
                             }
-
                             xorBitmap.Dispose();
                         }
                         else
@@ -109,17 +109,23 @@ namespace EscritorioRemotoDirectX.Services
                             using (MemoryStream ms = new MemoryStream())
                             {
                                 capture.Save(ms, ImageFormat.Png);
-                                Send(ms.ToArray());
+                                if (this.State == WebSocketState.Open)
+                                {
+                                    Send(ms.ToArray());
+                                }
                             }
                         }
 
-                        previousCapture = (Bitmap)capture.Clone();
+                        if (_previousCapture != null)
+                        {
+                            _previousCapture.Dispose();
+                        }
+                        _previousCapture = (Bitmap)capture.Clone();
                     }
                     else
                     {
                         Console.WriteLine("Error: capture is null.");
                     }
-
                     Thread.Sleep(_captureInterval);
                 }
             });
@@ -130,11 +136,28 @@ namespace EscritorioRemotoDirectX.Services
             _isRunning = false;
         }
 
-        protected override void OnClose(CloseEventArgs e)
+        private Bitmap ApplyXor(Bitmap previousCapture, Bitmap currentCapture)
         {
-            _outputDuplication.Dispose();
-            _device.Dispose();
-            base.OnClose(e);
+            int width = previousCapture.Width;
+            int height = previousCapture.Height;
+            Bitmap xorBitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color pixelCurrent = currentCapture.GetPixel(x, y);
+                    Color pixelPrevious = previousCapture.GetPixel(x, y);
+
+                    int r = pixelCurrent.R ^ pixelPrevious.R;
+                    int g = pixelCurrent.G ^ pixelPrevious.G;
+                    int b = pixelCurrent.B ^ pixelPrevious.B;
+
+                    Color xorColor = Color.FromArgb(r, g, b);
+                    xorBitmap.SetPixel(x, y, xorColor);
+                }
+            }
+            return xorBitmap;
         }
     }
 }

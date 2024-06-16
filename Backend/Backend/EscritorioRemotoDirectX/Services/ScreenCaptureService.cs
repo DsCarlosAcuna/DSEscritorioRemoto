@@ -48,7 +48,7 @@ namespace EscritorioRemotoDirectX.Services
                         OutputDuplicateFrameInformation frameInfo;
                         SharpDX.DXGI.Resource desktopResource;
 
-                        outputDuplication.AcquireNextFrame(500, out frameInfo, out desktopResource);
+                        outputDuplication.AcquireNextFrame(100, out frameInfo, out desktopResource);
 
                         using (var screenTexture2D = desktopResource.QueryInterface<Texture2D>())
                         {
