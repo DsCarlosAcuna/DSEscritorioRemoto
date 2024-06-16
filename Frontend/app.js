@@ -1,8 +1,7 @@
 const ws = new WebSocket("ws://localhost:8080/RemoteDesktop");
 const canvas = document.getElementById("screen");
 const ctx = canvas.getContext("2d");
-
-let lastImageData = null;
+let previousImage = null;
 
 ws.onopen = function () {
   console.log("Conectado al servidor WebSocket");
@@ -17,19 +16,26 @@ ws.onmessage = function (event) {
   const blob = new Blob([event.data], { type: "image/png" });
   const url = URL.createObjectURL(blob);
   const img = new Image();
-  img.onload = function () {
-    const newImageData = getImageDataFromImage(img);
 
-    if (lastImageData) {
-      applyXor(lastImageData, newImageData);
+  img.onload = function () {
+    if (previousImage) {
+      const xorImage = createXorImage(previousImage, img);
+      ctx.drawImage(xorImage, 0, 0, canvas.width, canvas.height);
+      previousImage = xorImage;
     } else {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      previousImage = img;
     }
-
-    lastImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     URL.revokeObjectURL(url); // Liberar el objeto URL
     requestCapture(); // Solicitar la siguiente captura
   };
+
+  img.onerror = function () {
+    console.error("Error loading image");
+    URL.revokeObjectURL(url); // Liberar el objeto URL
+    requestCapture(); // Intentar la siguiente captura
+  };
+
   img.src = url;
 };
 
@@ -37,8 +43,31 @@ function requestCapture() {
   ws.send("capture"); // Solicitar captura al servidor
 }
 
-function requestStatus() {
-  ws.send("status");
+function createXorImage(img1, img2) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = img1.width;
+  canvas.height = img1.height;
+
+  ctx.drawImage(img1, 0, 0);
+  const img1Data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  ctx.drawImage(img2, 0, 0);
+  const img2Data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const xorData = ctx.createImageData(canvas.width, canvas.height);
+
+  for (let i = 0; i < img1Data.data.length; i += 4) {
+    xorData.data[i] = img1Data.data[i] ^ img2Data.data[i];
+    xorData.data[i + 1] = img1Data.data[i + 1] ^ img2Data.data[i + 1];
+    xorData.data[i + 2] = img1Data.data[i + 2] ^ img2Data.data[i + 2];
+    xorData.data[i + 3] = 255; // set alpha channel to fully opaque
+  }
+
+  ctx.putImageData(xorData, 0, 0);
+  const xorImg = new Image();
+  xorImg.src = canvas.toDataURL();
+  return xorImg;
 }
 
 // Capturar eventos del mouse y teclado para enviar al servidor
@@ -60,31 +89,3 @@ document.addEventListener("keydown", function (event) {
   const data = { type: "keydown", key: event.key };
   ws.send(JSON.stringify(data));
 });
-
-function getImageDataFromImage(image) {
-  const tempCanvas = document.createElement("canvas");
-  const tempCtx = tempCanvas.getContext("2d");
-  tempCanvas.width = canvas.width;
-  tempCanvas.height = canvas.height;
-  tempCtx.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return tempCtx.getImageData(0, 0, canvas.width, canvas.height);
-}
-
-function applyXor(prevImageData, newImageData) {
-  const prevData = prevImageData.data;
-  const newData = newImageData.data;
-  let isBlack = true;
-
-  for (let i = 0; i < prevData.length; i++) {
-    newData[i] = prevData[i] ^ newData[i];
-    if (newData[i] !== 0) {
-      isBlack = false;
-    }
-  }
-
-  if (!isBlack) {
-    ctx.putImageData(newImageData, 0, 0);
-  } else {
-    console.log("Black frame detected, skipping update");
-  }
-}

@@ -9,7 +9,7 @@ using SharpDX.DXGI;
 namespace EscritorioRemotoDirectX.Services
 {
     public static class ScreenCaptureService
-    {        
+    {
         public static Bitmap CaptureScreen(SharpDX.Direct3D11.Device device, OutputDuplication outputDuplication)
         {
             Bitmap bitmap = null;
@@ -45,7 +45,11 @@ namespace EscritorioRemotoDirectX.Services
                 {
                     try
                     {
-                        outputDuplication.AcquireNextFrame(1000, out var frameInfo, out var desktopResource);
+                        OutputDuplicateFrameInformation frameInfo;
+                        SharpDX.DXGI.Resource desktopResource;
+
+                        outputDuplication.AcquireNextFrame(500, out frameInfo, out desktopResource);
+
                         using (var screenTexture2D = desktopResource.QueryInterface<Texture2D>())
                         {
                             device.ImmediateContext.CopyResource(screenTexture2D, screenTexture);
@@ -71,14 +75,20 @@ namespace EscritorioRemotoDirectX.Services
                             Marshal.Copy(rowBytes, 0, destinationRow, rowBytes.Length);
                         }
 
-
                         bitmap.UnlockBits(bitmapData);
                         device.ImmediateContext.UnmapSubresource(screenTexture, 0);
                         outputDuplication.ReleaseFrame();
                     }
                     catch (SharpDXException ex)
                     {
-                        Console.WriteLine("Error capturing screen: " + ex.Message);
+                        if (ex.ResultCode == Result.WaitTimeout)
+                        {
+                            Console.WriteLine("No new frame available within timeout.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Error capturing screen: " + ex.Message);
+                        }
                     }
                 }
 
