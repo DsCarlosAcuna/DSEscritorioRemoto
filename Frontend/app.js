@@ -3,6 +3,11 @@ const canvas = document.getElementById("screen");
 const ctx = canvas.getContext("2d");
 let previousImage = null;
 
+let lastTimestamp = null;
+let totalBytesReceived = 0;
+let frameCount = 0;
+let lastFpsTime = Date.now();
+
 function connectWebSocket() {
   ws = new WebSocket("ws://localhost:8080/RemoteDesktop");
 
@@ -22,14 +27,23 @@ function connectWebSocket() {
   };
 
   ws.onmessage = function (event) {
-    const blob = new Blob([event.data], { type: "image/png" });
+    const data = JSON.parse(event.data);
+    const imageData = atob(data.ImageData);
+    const byteArray = new Uint8Array(imageData.length);
+    for (let i = 0; i < imageData.length; i++) {
+      byteArray[i] = imageData.charCodeAt(i);
+    }
+
+    totalBytesReceived += byteArray.length;
+
+    const blob = new Blob([byteArray], { type: "image/png" });
     const url = URL.createObjectURL(blob);
     const img = new Image();
 
     img.onload = function () {
+      adjustCanvasSize(img.width, img.height); // Ajusta el tamaño del canvas
       if (previousImage) {
         applyXor(previousImage, img);
-        console.log("aplicando xor");
       } else {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         previousImage = document.createElement("canvas");
@@ -39,6 +53,20 @@ function connectWebSocket() {
       }
       URL.revokeObjectURL(url); // Liberar el objeto URL
       requestCapture(); // Solicitar la siguiente captura
+
+      frameCount++;
+      const now = Date.now();
+      if (now - lastFpsTime >= 1000) {
+        const fps = frameCount;
+        const kbps = (totalBytesReceived * 8) / 1000; // Convertir a kilobits por segundo
+        console.log(`FPS: ${fps}, Kbps: ${kbps.toFixed(2)}`);
+        document.getElementById("fps").innerText = `FPS: ${fps}`;
+        document.getElementById("kbps").innerText = `Kbps: ${kbps.toFixed(2)}`;
+
+        frameCount = 0;
+        totalBytesReceived = 0;
+        lastFpsTime = now;
+      }
     };
 
     img.onerror = function () {
@@ -49,6 +77,13 @@ function connectWebSocket() {
 
     img.src = url;
   };
+}
+
+function adjustCanvasSize(width, height) {
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
 }
 
 function requestCapture() {

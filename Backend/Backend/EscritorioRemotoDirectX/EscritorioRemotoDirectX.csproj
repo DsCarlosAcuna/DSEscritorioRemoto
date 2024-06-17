@@ -136,10 +136,12 @@
     <Compile Include="Models\EventData.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\CaptureService.cs" />
+    <Compile Include="Services\DirectXService.cs" />
     <Compile Include="Services\InputHandlingService.cs" />
-    <Compile Include="Services\RemoteDesktopService.cs" />
+    <Compile Include="Services\RemoteDesktop.cs" />
     <Compile Include="Services\ScreenCaptureService.cs" />
-    <Compile Include="Utils\DirectXHelper.cs" />
+    <Compile Include="Utils\XorMethodHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

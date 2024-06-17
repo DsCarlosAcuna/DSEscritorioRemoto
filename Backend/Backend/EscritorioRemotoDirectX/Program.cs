@@ -1,5 +1,6 @@
 ﻿using System;
 using WebSocketSharp.Server;
+
 using EscritorioRemotoDirectX.Services;
 
 namespace EscritorioRemotoDirectX
@@ -13,10 +14,10 @@ namespace EscritorioRemotoDirectX
             wssv.AddWebSocketService<RemoteDesktop>("/RemoteDesktop");
 
             wssv.Start();
-            Console.WriteLine("Servidor WebSocket iniciado en ws://localhost:8080");           
+            Console.WriteLine("Servidor WebSocket iniciado en ws://localhost:8080");
 
             Console.ReadKey();
             wssv.Stop();
-        }        
+        }
     }
 }

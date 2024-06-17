@@ -3,12 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Backend", "Backend\Backend.csproj", "{06CDD937-D0CF-4378-BE85-1A6077B37229}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EscritorioRemotoBitBlt", "EscritorioRemotoBitBlt\EscritorioRemotoBitBlt.csproj", "{1AD82862-1765-4EDC-8491-CD5989891421}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EscritorioRemotoBitBltXor", "EscritorioRemotoBitBltXor\EscritorioRemotoBitBltXor.csproj", "{FA07E8CC-355B-43C4-A5F8-88B45027E0DD}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EscritorioRemotoDirectX", "EscritorioRemotoDirectX\EscritorioRemotoDirectX.csproj", "{16ABFA0B-8C81-48B2-A4B6-D8D3571C16B9}"
 EndProject
 Global
@@ -17,18 +11,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{06CDD937-D0CF-4378-BE85-1A6077B37229}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{06CDD937-D0CF-4378-BE85-1A6077B37229}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{06CDD937-D0CF-4378-BE85-1A6077B37229}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{06CDD937-D0CF-4378-BE85-1A6077B37229}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1AD82862-1765-4EDC-8491-CD5989891421}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1AD82862-1765-4EDC-8491-CD5989891421}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1AD82862-1765-4EDC-8491-CD5989891421}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1AD82862-1765-4EDC-8491-CD5989891421}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FA07E8CC-355B-43C4-A5F8-88B45027E0DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FA07E8CC-355B-43C4-A5F8-88B45027E0DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FA07E8CC-355B-43C4-A5F8-88B45027E0DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FA07E8CC-355B-43C4-A5F8-88B45027E0DD}.Release|Any CPU.Build.0 = Release|Any CPU
 		{16ABFA0B-8C81-48B2-A4B6-D8D3571C16B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{16ABFA0B-8C81-48B2-A4B6-D8D3571C16B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{16ABFA0B-8C81-48B2-A4B6-D8D3571C16B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
