@@ -145,10 +145,27 @@ canvas.addEventListener("click", function (event) {
 });
 
 document.addEventListener("keydown", function (event) {
-  if (ws.readyState === WebSocket.OPEN) {
-    const data = { type: "keydown", key: event.key };
-    ws.send(JSON.stringify(data));
+  const specialKeys = [
+    "Backspace",
+    "Enter",
+    "Tab",
+    "Escape",
+    "ArrowLeft",
+    "ArrowUp",
+    "ArrowRight",
+    "ArrowDown",
+    "Delete",
+    "Home",
+    "End",
+    "PageUp",
+    "PageDown",
+  ];
+  let key = event.key;
+  if (specialKeys.includes(event.key)) {
+    key = event.key.replace("Arrow", "").toLowerCase(); // Normaliza los nombres de las teclas
   }
+  const data = { type: "keydown", key: key };
+  ws.send(JSON.stringify(data));
 });
 
 // Iniciar la conexión WebSocket
