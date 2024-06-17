@@ -40,7 +40,53 @@ namespace EscritorioRemotoDirectX.Services
 
         private static void KeyDown(string key)
         {
-            SendKeys.SendWait(key);
+            // Handle special keys
+            switch (key.ToLower())
+            {
+                case "backspace":
+                    SendKeys.SendWait("{BACKSPACE}");
+                    break;
+                case "enter":
+                    SendKeys.SendWait("{ENTER}");
+                    break;
+                case "tab":
+                    SendKeys.SendWait("{TAB}");
+                    break;
+                case "escape":
+                    SendKeys.SendWait("{ESC}");
+                    break;
+                case "left":
+                    SendKeys.SendWait("{LEFT}");
+                    break;
+                case "up":
+                    SendKeys.SendWait("{UP}");
+                    break;
+                case "right":
+                    SendKeys.SendWait("{RIGHT}");
+                    break;
+                case "down":
+                    SendKeys.SendWait("{DOWN}");
+                    break;
+                case "delete":
+                    SendKeys.SendWait("{DELETE}");
+                    break;
+                case "home":
+                    SendKeys.SendWait("{HOME}");
+                    break;
+                case "end":
+                    SendKeys.SendWait("{END}");
+                    break;
+                case "pageup":
+                    SendKeys.SendWait("{PGUP}");
+                    break;
+                case "pagedown":
+                    SendKeys.SendWait("{PGDN}");
+                    break;
+                default:
+                    // Send the key as it is for alphanumeric and other keys
+                    SendKeys.SendWait(key);
+                    break;
+            }
         }
 
         [DllImport("user32.dll", SetLastError = true)]
