@@ -29,6 +29,7 @@ function connectWebSocket() {
     img.onload = function () {
       if (previousImage) {
         applyXor(previousImage, img);
+        console.log("aplicando xor");
       } else {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         previousImage = document.createElement("canvas");

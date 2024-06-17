@@ -10,18 +10,17 @@ using WebSocketSharp.Server;
 using Newtonsoft.Json;
 using SharpDX.DXGI;
 using EscritorioRemotoDirectX.Models;
-using SharpDX;
 
 namespace EscritorioRemotoDirectX.Services
 {
     public class RemoteDesktop : WebSocketBehavior
     {
         private static readonly object captureLock = new object();
-        private static bool _isRunning = false;
+        private bool _isRunning = false;
         private static SharpDX.Direct3D11.Device _device;
         private static OutputDuplication _outputDuplication;
         private static int _captureInterval = 100;
-        private static Bitmap _previousCapture;
+        private Bitmap _previousCapture;
 
         public RemoteDesktop()
         {
@@ -48,6 +47,7 @@ namespace EscritorioRemotoDirectX.Services
         protected override void OnOpen()
         {
             Console.WriteLine("WebSocket connection opened");
+            _previousCapture = null; // Reset previous capture when a new connection is opened
         }
 
         protected override void OnClose(CloseEventArgs e)
@@ -186,105 +186,5 @@ namespace EscritorioRemotoDirectX.Services
 
             return xorBitmap;
         }
-    }
-}
-
-public static class ScreenCaptureService
-{
-    public static Bitmap CaptureScreen(SharpDX.Direct3D11.Device device, OutputDuplication outputDuplication)
-    {
-        Bitmap bitmap = null;
-        try
-        {
-            if (device == null || outputDuplication == null)
-            {
-                throw new ArgumentNullException("Device or OutputDuplication is null");
-            }
-
-            var factory = new Factory1();
-            var adapter = factory.GetAdapter1(0);
-            var output = adapter.GetOutput(0);
-            var output1 = output.QueryInterface<Output1>();
-
-            var bounds = output.Description.DesktopBounds;
-            var width = bounds.Right - bounds.Left;
-            var height = bounds.Bottom - bounds.Top;
-
-            using (var screenTexture = new Texture2D(device, new Texture2DDescription
-            {
-                Width = width,
-                Height = height,
-                MipLevels = 1,
-                ArraySize = 1,
-                Format = Format.B8G8R8A8_UNorm,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Staging,
-                BindFlags = BindFlags.None,
-                CpuAccessFlags = CpuAccessFlags.Read,
-                OptionFlags = ResourceOptionFlags.None
-            }))
-            {
-                try
-                {
-                    OutputDuplicateFrameInformation frameInfo;
-                    SharpDX.DXGI.Resource desktopResource;
-
-                    outputDuplication.AcquireNextFrame(100, out frameInfo, out desktopResource);
-
-                    using (var screenTexture2D = desktopResource.QueryInterface<Texture2D>())
-                    {
-                        device.ImmediateContext.CopyResource(screenTexture2D, screenTexture);
-                    }
-
-                    var dataBox = device.ImmediateContext.MapSubresource(screenTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
-                    bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-                    var boundsRect = new Rectangle(0, 0, width, height);
-                    var bitmapData = bitmap.LockBits(boundsRect, ImageLockMode.WriteOnly, bitmap.PixelFormat);
-
-                    int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
-                    int dataBoxRowPitch = dataBox.RowPitch;
-                    int bitmapDataStride = bitmapData.Stride;
-                    IntPtr dataBoxPointer = dataBox.DataPointer;
-                    IntPtr bitmapDataPointer = bitmapData.Scan0;
-
-                    unsafe
-                    {
-                        byte* src = (byte*)dataBoxPointer;
-                        byte* dest = (byte*)bitmapDataPointer;
-
-                        for (int y = 0; y < height; y++)
-                        {
-                            System.Buffer.MemoryCopy(src + y * dataBoxRowPitch, dest + y * bitmapDataStride, width * bytesPerPixel, width * bytesPerPixel);
-                        }
-                    }
-
-                    bitmap.UnlockBits(bitmapData);
-                    device.ImmediateContext.UnmapSubresource(screenTexture, 0);
-                    outputDuplication.ReleaseFrame();
-                }
-                catch (SharpDXException ex)
-                {
-                    if (ex.ResultCode == Result.WaitTimeout)
-                    {
-                        Console.WriteLine("No new frame available within timeout.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Error capturing screen: " + ex.Message);
-                    }
-                }
-            }
-
-            output1.Dispose();
-            output.Dispose();
-            adapter.Dispose();
-            factory.Dispose();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Error during screen capture: " + ex.Message);
-        }
-
-        return bitmap;
     }
 }
