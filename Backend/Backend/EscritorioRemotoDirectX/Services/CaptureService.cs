@@ -35,7 +35,7 @@ namespace EscritorioRemotoDirectX.Services
                 {
                     lock (captureLock)
                     {
-                        Bitmap capture = ScreenCaptureService.CaptureScreen(DirectXService.Device, DirectXService.OutputDuplication,remoteIp, remotePort);
+                        Bitmap capture = ScreenCaptureService.CaptureScreen(DirectXService.Device, DirectXService.OutputDuplication);
                         if (capture != null)
                         {
                             byte[] imageData;

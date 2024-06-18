@@ -12,19 +12,7 @@ namespace EscritorioRemotoDirectX.Services
 {
     public static class ScreenCaptureService
     {
-        public static Bitmap CaptureScreen(SharpDX.Direct3D11.Device device, OutputDuplication outputDuplication, string remoteIp = null, int remotePort = 0)
-        {
-            if (!string.IsNullOrEmpty(remoteIp))
-            {
-                return CaptureRemoteScreen(remoteIp, remotePort);
-            }
-            else
-            {
-                return CaptureLocalScreen(device, outputDuplication);
-            }
-        }
-
-        public static Bitmap CaptureLocalScreen(SharpDX.Direct3D11.Device device, OutputDuplication outputDuplication)
+        public static Bitmap CaptureScreen(SharpDX.Direct3D11.Device device, OutputDuplication outputDuplication)
         {
             Bitmap bitmap = null;
             try
@@ -116,40 +104,6 @@ namespace EscritorioRemotoDirectX.Services
                 Console.WriteLine("Error during screen capture: " + ex.Message);
             }
 
-            return bitmap;
-        }
-
-        private static Bitmap CaptureRemoteScreen(string remoteIp, int remotePort)
-        {
-            Bitmap bitmap = null;
-            try
-            {
-                using (TcpClient client = new TcpClient(remoteIp, remotePort))
-                using (NetworkStream stream = client.GetStream())
-                {
-                    stream.WriteByte(1); // Send capture request
-
-                    byte[] lengthBuffer = new byte[4];
-                    stream.Read(lengthBuffer, 0, 4);
-                    int length = BitConverter.ToInt32(lengthBuffer, 0);
-
-                    byte[] imageBuffer = new byte[length];
-                    int bytesRead = 0;
-                    while (bytesRead < length)
-                    {
-                        bytesRead += stream.Read(imageBuffer, bytesRead, length - bytesRead);
-                    }
-
-                    using (MemoryStream ms = new MemoryStream(imageBuffer))
-                    {
-                        return new Bitmap(ms);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error capturing remote screen: " + ex.Message);
-            }
             return bitmap;
         }
     }
