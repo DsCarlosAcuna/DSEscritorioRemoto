@@ -58,8 +58,7 @@ function connectWebSocket() {
       const now = Date.now();
       if (now - lastFpsTime >= 1000) {
         const fps = frameCount;
-        const kbps = (totalBytesReceived * 8) / 1000; // Convertir a kilobits por segundo
-        console.log(`FPS: ${fps}, Kbps: ${kbps.toFixed(2)}`);
+        const kbps = (totalBytesReceived) / 1000; // Convertir a kilobytes por segundo
         document.getElementById("fps").innerText = `FPS: ${fps}`;
         document.getElementById("kbps").innerText = `Kbps: ${kbps.toFixed(2)}`;
 

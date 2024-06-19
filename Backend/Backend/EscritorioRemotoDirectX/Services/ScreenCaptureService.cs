@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using SharpDX;
 using SharpDX.Direct3D11;
