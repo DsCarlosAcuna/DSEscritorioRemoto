@@ -17,7 +17,7 @@ namespace EscritorioRemotoDirectX.Services
             {
                 if (device == null || outputDuplication == null)
                 {
-                    throw new ArgumentNullException("Device or OutputDuplication is null");
+                    throw new ArgumentNullException("El dispositivo o la duplicación de salida es nulo");
                 }
 
                 var factory = new Factory1();
@@ -83,11 +83,11 @@ namespace EscritorioRemotoDirectX.Services
                     {
                         if (ex.ResultCode == Result.WaitTimeout)
                         {
-                            Console.WriteLine("No new frame available within timeout.");
+                            Console.WriteLine("No hay ningún fotograma nuevo disponible dentro del tiempo de espera");
                         }
                         else
                         {
-                            Console.WriteLine("Error capturing screen: " + ex.Message);
+                            Console.WriteLine("Error al capturar la pantalla: " + ex.Message);
                         }
                     }
                 }
@@ -99,7 +99,7 @@ namespace EscritorioRemotoDirectX.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error during screen capture: " + ex.Message);
+                Console.WriteLine("Error durante la captura de pantalla: " + ex.Message);
             }
 
             return bitmap;

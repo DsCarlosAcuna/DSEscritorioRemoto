@@ -10,19 +10,36 @@ namespace EscritorioRemotoDirectX.Services
     public class RemoteDesktop : WebSocketBehavior
     {
         private CaptureService _captureService;
+        private DatabaseService _databaseService;
 
         public RemoteDesktop()
         {
             DirectXService.InitializeDirectX();
+            _databaseService = new DatabaseService("D:\\Documents\\MyMainJob\\Digital Solutions 324 SL\\Databases\\dsescritorioremoto.db");
         }
 
         protected override void OnMessage(MessageEventArgs e)
         {
-            if (e.Data == "capture")
+            var requestData = JsonConvert.DeserializeObject<RequestData>(e.Data);
+
+            if (requestData.Command == "authenticate")
+            {
+                try
+                {
+                    var (ip, port) = _databaseService.GetConnectionDetails(requestData.PcName, requestData.Username, requestData.Password);
+                    StartCapture(ip, port);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Authentication failed: " + ex.Message);
+                    Send("Authentication failed: " + ex.Message);
+                }
+            }
+            else if (_captureService != null && requestData.Command == "capture")
             {
                 _captureService.StartCapture();
             }
-            else if (e.Data == "stop")
+            else if (_captureService != null && requestData.Command == "stop")
             {
                 _captureService.StopCapture();
             }
@@ -35,21 +52,26 @@ namespace EscritorioRemotoDirectX.Services
 
         protected override void OnOpen()
         {
-            Console.WriteLine("WebSocket connection opened");
-            _captureService = new CaptureService(this.Context.WebSocket);
-            _captureService.StartCapture();
+            Console.WriteLine("Conexión WebSocket abierta");
         }
 
         protected override void OnClose(CloseEventArgs e)
         {
-            Console.WriteLine("WebSocket connection closed");
-            _captureService.StopCapture();
+            Console.WriteLine("Conexión WebSocket cerrada");
+            _captureService?.StopCapture();
         }
 
         protected override void OnError(ErrorEventArgs e)
         {
-            Console.WriteLine("WebSocket error: " + e.Message);
-            _captureService.StopCapture();
+            Console.WriteLine("Error de WebSocket: " + e.Message);
+            _captureService?.StopCapture();
+        }
+
+        private void StartCapture(string ip, int port)
+        {
+            Console.WriteLine($"Autenticado correctamente, iniciando la captura para escritorio remoto en {ip}:{port}");
+            _captureService = new CaptureService(this.Context.WebSocket);
+            _captureService.StartCapture();
         }
     }
 }

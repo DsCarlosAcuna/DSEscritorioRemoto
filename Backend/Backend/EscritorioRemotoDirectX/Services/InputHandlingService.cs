@@ -16,7 +16,22 @@ namespace EscritorioRemotoDirectX.Services
                     MouseMove(eventData.X, eventData.Y);
                     break;
                 case "click":
-                    MouseClick(eventData.X, eventData.Y);
+                    MouseClick(eventData.X, eventData.Y, MouseEventFlag.LeftDown | MouseEventFlag.LeftUp);
+                    break;
+                case "rightclick":
+                    MouseClick(eventData.X, eventData.Y, MouseEventFlag.RightDown | MouseEventFlag.RightUp);
+                    break;
+                case "middleclick":
+                    MouseClick(eventData.X, eventData.Y, MouseEventFlag.MiddleDown | MouseEventFlag.MiddleUp);
+                    break;
+                case "doubleclick":
+                    MouseDoubleClick(eventData.X, eventData.Y);
+                    break;
+                case "scroll":
+                    MouseScroll(eventData.Delta);
+                    break;
+                case "drag":
+                    MouseDrag(eventData.X, eventData.Y, eventData.DX, eventData.DY);
                     break;
                 case "keydown":
                     KeyDown(eventData.Key);
@@ -32,15 +47,34 @@ namespace EscritorioRemotoDirectX.Services
             Cursor.Position = new System.Drawing.Point(x, y);
         }
 
-        private static void MouseClick(int x, int y)
+        private static void MouseClick(int x, int y, MouseEventFlag mouseEventFlag)
+        {
+            Cursor.Position = new System.Drawing.Point(x, y);
+            mouse_event(mouseEventFlag, x, y, 0, 0);
+        }
+
+        private static void MouseDoubleClick(int x, int y)
         {
             Cursor.Position = new System.Drawing.Point(x, y);
             mouse_event(MouseEventFlag.LeftDown | MouseEventFlag.LeftUp, x, y, 0, 0);
+            mouse_event(MouseEventFlag.LeftDown | MouseEventFlag.LeftUp, x, y, 0, 0);
+        }
+
+        private static void MouseScroll(int delta)
+        {
+            mouse_event(MouseEventFlag.Wheel, 0, 0, (uint)delta, 0);
+        }
+
+        private static void MouseDrag(int x, int y, int dx, int dy)
+        {
+            Cursor.Position = new System.Drawing.Point(x, y);
+            mouse_event(MouseEventFlag.LeftDown, x, y, 0, 0);
+            Cursor.Position = new System.Drawing.Point(x + dx, y + dy);
+            mouse_event(MouseEventFlag.LeftUp, x + dx, y + dy, 0, 0);
         }
 
         private static void KeyDown(string key)
         {
-            // Handle special keys
             switch (key.ToLower())
             {
                 case "backspace":
@@ -82,8 +116,36 @@ namespace EscritorioRemotoDirectX.Services
                 case "pagedown":
                     SendKeys.SendWait("{PGDN}");
                     break;
+                case "insert":
+                    SendKeys.SendWait("{INSERT}");
+                    break;
+                case "space":
+                    SendKeys.SendWait(" ");
+                    break;
+                case "shift":
+                    SendKeys.SendWait("+");
+                    break;
+                case "ctrl":
+                    SendKeys.SendWait("^");
+                    break;
+                case "alt":
+                    SendKeys.SendWait("%");
+                    break;
+                case "f1":
+                case "f2":
+                case "f3":
+                case "f4":
+                case "f5":
+                case "f6":
+                case "f7":
+                case "f8":
+                case "f9":
+                case "f10":
+                case "f11":
+                case "f12":
+                    SendKeys.SendWait("{" + key.ToUpper() + "}");
+                    break;
                 default:
-                    // Send the key as it is for alphanumeric and other keys
                     SendKeys.SendWait(key);
                     break;
             }
@@ -98,7 +160,10 @@ namespace EscritorioRemotoDirectX.Services
             LeftDown = 0x0002,
             LeftUp = 0x0004,
             RightDown = 0x0008,
-            RightUp = 0x0010
+            RightUp = 0x0010,
+            MiddleDown = 0x0020,
+            MiddleUp = 0x0040,
+            Wheel = 0x0800
         }
     }
 }

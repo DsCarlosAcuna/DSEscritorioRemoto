@@ -9,12 +9,12 @@ namespace EscritorioRemotoDirectX
     {
         static void Main(string[] args)
         {
-            WebSocketServer wssv = new WebSocketServer("ws://localhost:8080");
+            WebSocketServer wssv = new WebSocketServer("ws://192.168.1.3:8080");
 
             wssv.AddWebSocketService<RemoteDesktop>("/RemoteDesktop");
 
             wssv.Start();
-            Console.WriteLine("Servidor WebSocket iniciado en ws://localhost:8080");
+            Console.WriteLine("Servidor WebSocket iniciado en ws://192.168.1.3:8080");
 
             Console.ReadKey();
             wssv.Stop();

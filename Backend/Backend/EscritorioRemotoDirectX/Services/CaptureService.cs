@@ -4,7 +4,6 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using WebSocketSharp;
-using Newtonsoft.Json;
 
 using EscritorioRemotoDirectX.Utils;
 
@@ -62,18 +61,12 @@ namespace EscritorioRemotoDirectX.Services
 
                             if (_webSocket.ReadyState == WebSocketState.Open)
                             {
-                                var payload = new
-                                {
-                                    Timestamp = DateTime.UtcNow.Ticks,
-                                    ImageData = Convert.ToBase64String(imageData)
-                                };
-                                string jsonPayload = JsonConvert.SerializeObject(payload);
-                                _webSocket.Send(jsonPayload);
+                                _webSocket.Send(imageData);
                             }
                         }
                         else
                         {
-                            Console.WriteLine("Error: capture is null.");
+                            Console.WriteLine("Error: la captura es nula");
                         }
                     }
                     Thread.Sleep(_captureInterval);
